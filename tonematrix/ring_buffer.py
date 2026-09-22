@@ -40,16 +40,14 @@ class RingBuffer:
         """
 
     def capacity(self):
+        """The most items this buffer can hold."""
 
         return self._capacity
 
-        """The most items this buffer can hold."""
-
     def size(self):
+        """How many items are in the buffer right now."""
 
         return self._size
-
-        """How many items are in the buffer right now."""
 
     def is_empty(self):
 
@@ -62,6 +60,10 @@ class RingBuffer:
             return True
 
     def enqueue(self, x):
+        """Add x at the rear. 
+        
+        Raise IndexError if the buffer is already full.
+        """
 
         if self.is_full():
             raise IndexError("Buffer is already full.")
@@ -74,13 +76,12 @@ class RingBuffer:
             self._rear += 1
         self._size += 1
 
-        """Add x at the rear. 
-        
-        Raise IndexError if the buffer is already full.
-        """
-
     def dequeue(self):
+        """Remove and return the item at the front. 
 
+        Raise IndexError if the buffer is empty.
+        """
+    
         if self.is_empty():
             raise IndexError("Buffer is empty.")
 
@@ -94,22 +95,16 @@ class RingBuffer:
 
         return front_item
 
-        """Remove and return the item at the front. 
+    def peek(self):
+        """Return the item at the front without removing it.
 
         Raise IndexError if the buffer is empty.
         """
-
-    def peek(self):
 
         if self.is_empty():
             raise IndexError("Buffer is empty.")
 
         return self._data[self._front]
-
-        """Return the item at the front without removing it.
-
-        Raise IndexError if the buffer is empty.
-        """
 
     def __len__(self):
         """So that len(buffer) works. Provided, once size() works."""
