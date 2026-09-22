@@ -25,6 +25,24 @@ class StringInstrument:
     """A string that rings at a fixed frequency when plucked."""
 
     def __init__(self, frequency, sample_rate=SAMPLE_RATE):
+
+        if frequency <= 0:
+            raise ValueError("Frequency should be positive")
+
+        N = int(sample_rate // frequency)
+
+        if N < 2:
+            raise ValueError("N should be greater than or equal to 2.")
+
+        self.buffer = RingBuffer(N)
+
+        i = 0
+        while i < N:
+            self.buffer.enqueue(0)
+            i += 1
+
+        self.frequency = frequency
+
         """Build a string that vibrates at `frequency` hertz.
 
         The buffer holds `sample_rate // frequency` samples. Create it, then
@@ -34,8 +52,6 @@ class StringInstrument:
         Raise ValueError if the frequency is not positive, or if the buffer
         would hold fewer than 2 samples.
         """
-        # TODO (Milestone 4)
-        raise NotImplementedError("StringInstrument.__init__")
 
     @classmethod
     def make_from_array(cls, values, frequency=None, sample_rate=SAMPLE_RATE):
@@ -61,13 +77,33 @@ class StringInstrument:
         """Excite the string: front half of the buffer to +PLUCK_AMPLITUDE, 
         back half to -PLUCK_AMPLITUDE.
         """
-        # TODO (Milestone 5)
-        raise NotImplementedError("StringInstrument.pluck")
+        capacity = self.buffer.capacity()
+
+        for i in range(capacity):
+            self.buffer.dequeue()
+
+            if capacity % 2 == 0:
+                if i < (capacity // 2):
+                    self.buffer.enqueue(+PLUCK_AMPLITUDE)
+                else:
+                    self.buffer.enqueue(-PLUCK_AMPLITUDE)
+            else:
+                if i <= (capacity // 2):
+                    self.buffer.enqueue(+PLUCK_AMPLITUDE)
+                else:
+                    self.buffer.enqueue(-PLUCK_AMPLITUDE)
+
 
     def next_sample(self):
         """Return the next output sample and advance the simulation one step."""
-        # TODO (Milestone 6)
-        raise NotImplementedError("StringInstrument.next_sample")
+
+        sample = self.buffer.dequeue()
+
+        new_front = self.buffer.peek()
+
+        self.buffer.enqueue(((sample + new_front)/2) * DECAY)
+
+        return sample
 
     def energy(self):
         """Mean absolute amplitude in the buffer. Provided; used in Part 4.
