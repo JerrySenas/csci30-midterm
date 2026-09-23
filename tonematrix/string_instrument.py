@@ -35,11 +35,8 @@ class StringInstrument:
             raise ValueError("N should be greater than or equal to 2.")
 
         self.buffer = RingBuffer(N)
-
-        i = 0
-        while i < N:
+        for _ in range(N):
             self.buffer.enqueue(0)
-            i += 1
 
         self.frequency = frequency
 
@@ -77,28 +74,18 @@ class StringInstrument:
         """Excite the string: front half of the buffer to +PLUCK_AMPLITUDE, 
         back half to -PLUCK_AMPLITUDE.
         """
-        capacity = self.buffer.capacity()
-
-        for i in range(capacity):
+        half = self.buffer.capacity() // 2
+        for i in range(half):
             self.buffer.dequeue()
-
-            if capacity % 2 == 0:
-                if i < (capacity // 2):
-                    self.buffer.enqueue(+PLUCK_AMPLITUDE)
-                else:
-                    self.buffer.enqueue(-PLUCK_AMPLITUDE)
-            else:
-                if i <= (capacity // 2):
-                    self.buffer.enqueue(+PLUCK_AMPLITUDE)
-                else:
-                    self.buffer.enqueue(-PLUCK_AMPLITUDE)
-
+            self.buffer.enqueue(PLUCK_AMPLITUDE)
+        for i in range(self.buffer.capacity() - half):
+            self.buffer.dequeue()
+            self.buffer.enqueue(-PLUCK_AMPLITUDE)
 
     def next_sample(self):
         """Return the next output sample and advance the simulation one step."""
 
         sample = self.buffer.dequeue()
-
         new_front = self.buffer.peek()
 
         self.buffer.enqueue(((sample + new_front)/2) * DECAY)
