@@ -33,8 +33,16 @@ class ToneMatrix:
 
         Raise ValueError if grid_size < 1.
         """
-        # TODO (Milestone 5)
-        raise NotImplementedError("ToneMatrix.__init__")
+        if grid_size < 1:
+            raise ValueError
+
+        self.grid_size = grid_size
+        self.grid = [False] * grid_size**2
+        self.instruments = [StringInstrument(frequency_for_row(i, grid_size)) for i in range(grid_size)]
+        self.column = 0
+        self.last_press = True
+        self.times_sample_called = 0
+        self.samples_per_column = samples_per_column
 
     ### indexing
 
@@ -43,8 +51,9 @@ class ToneMatrix:
 
         Raise IndexError if the position is off the grid.
         """
-        # TODO (Milestone 5)
-        raise NotImplementedError("ToneMatrix.index_of")
+        if row < 0 or col < 0 or row >= self.grid_size or col >= self.grid_size:
+            raise IndexError
+        return self.grid_size * row + col
 
     def is_on(self, row, col):
         """Provided, once index_of works."""
@@ -61,8 +70,8 @@ class ToneMatrix:
 
         Also remember what the cell became, so that drag() can copy it.
         """
-        # TODO (Milestone 6)
-        raise NotImplementedError("ToneMatrix.press")
+        self.last_press = not self.is_on(row, col)
+        self.set_cell(row, col, self.last_press)
 
     def drag(self, row, col):
         """The user dragged across this cell after a press().
@@ -71,13 +80,13 @@ class ToneMatrix:
         drag that started by switching a cell on paints cells on, and a drag
         that started by switching one off erases.
         """
-        # TODO (Milestone 6)
-        raise NotImplementedError("ToneMatrix.drag")
+        self.set_cell(row, col, self.last_press)
 
     def clear(self):
         """Switch every cell off, without replacing the list."""
-        # TODO (Milestone 6)
-        raise NotImplementedError("ToneMatrix.clear")
+        for i in range(self.grid_size):
+            for j in range(self.grid_size):
+                self.set_cell(i, j, False)
 
     ### playback
 
@@ -91,13 +100,28 @@ class ToneMatrix:
         Every call, including those ones, returns the sum of next_sample()
         over all the instruments.
         """
-        # TODO (Milestone 7)
-        raise NotImplementedError("ToneMatrix.next_sample")
+        if self.times_sample_called == 0:
+            self.pluck_column(self.column)
+            self.column += 1
+            if self.column == self.grid_size:
+                self.column = 0
+
+        sum = 0
+        for instrument in self.instruments:
+            sum += instrument.next_sample()
+
+        self.times_sample_called += 1
+        if self.times_sample_called == self.samples_per_column:
+            self.times_sample_called = 0
+        
+        return sum
+
 
     def pluck_column(self, col):
         """Pluck the string of every lit row in this column."""
-        # TODO (Milestone 7)
-        raise NotImplementedError("ToneMatrix.pluck_column")
+        for i in range(self.grid_size):
+            if self.is_on(i, col):
+                self.instruments[i].pluck()
 
     ### resizing
 
@@ -111,15 +135,44 @@ class ToneMatrix:
 
         Raise ValueError if new_size < 1.
         """
-        # TODO (Milestone 8)
-        raise NotImplementedError("ToneMatrix.resize")
+        if new_size < 1:
+            raise ValueError
+
+        new_grid = []
+        if new_size < self.grid_size:
+            for row in range(new_size):
+                new_grid.extend(self.grid[ self.index_of(row, 0) : self.index_of(row, new_size - 1) + 1 ])
+            self.grid = new_grid
+            self.instruments = self.instruments[:new_size]
+
+
+        elif new_size > self.grid_size:
+            size_diff = new_size - self.grid_size
+            for row in range(self.grid_size):
+                new_grid.extend(self.grid[ self.index_of(row, 0) : self.index_of(row, self.grid_size - 1) + 1 ])
+                new_grid.extend([False] * size_diff)
+            new_grid.extend([False] * size_diff * new_size)
+            self.grid = new_grid
+            self.instruments.extend([StringInstrument(frequency_for_row(self.grid_size + i, new_size)) for i in range(size_diff)])
+
+        self.column = 0
+        self.grid_size = new_size
+        self.times_sample_called = 0
 
     ### serialization
 
     def to_text(self):
         """Render the grid as grid_size lines of '#' and '.'."""
-        # TODO (Milestone 6)
-        raise NotImplementedError("ToneMatrix.to_text")
+        render = ""
+        for row in range(self.grid_size):
+            for col in range(self.grid_size):
+                if self.is_on(row, col):
+                    render += ON
+                else:
+                    render += OFF
+            if row != self.grid_size - 1:
+                render += "\n"
+        return render
 
     @classmethod
     def from_text(cls, text, **kwargs):
