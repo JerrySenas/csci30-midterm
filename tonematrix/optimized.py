@@ -1,14 +1,6 @@
-"""Part 3: the tone matrix.
 
-A grid_size x grid_size grid of cells, stored as a *flat* list in row-major
-order, plus one StringInstrument per row.
-
-Rules for this file:
-  * self.grid is a flat list of bools of length grid_size ** 2. Do not use a
-    list of lists, a dict, a set, or numpy.
-  * The list is fixed-length: no append/pop/insert/remove. resize() is the
-    one place you build a new list, and even there you copy element by
-    element.
+"""
+Part 4
 """
 
 from tonematrix.audio import SAMPLE_RATE, SAMPLES_PER_COLUMN
@@ -43,6 +35,8 @@ class ToneMatrix:
         self.last_press = True
         self.times_sample_called = 0
         self.samples_per_column = samples_per_column
+        
+        self.lit_cells = [[] for row in range(grid_size)]
 
     ### indexing
 
@@ -70,7 +64,14 @@ class ToneMatrix:
 
         Also remember what the cell became, so that drag() can copy it.
         """
-        self.last_press = not self.is_on(row, col)
+        cell = self.is_on(row, col)
+        self.last_press = not cell
+
+        if self.last_press:
+            self.lit_cells[col].append(row)
+        else:
+            self.lit_cells[col].remove(row)
+
         self.set_cell(row, col, self.last_press)
 
     def drag(self, row, col):
@@ -80,6 +81,10 @@ class ToneMatrix:
         drag that started by switching a cell on paints cells on, and a drag
         that started by switching one off erases.
         """
+        if self.last_press:
+            self.lit_cells[col].append(row)
+        elif self.is_on(row, col):
+            self.lit_cells[col].remove(row)
         self.set_cell(row, col, self.last_press)
 
     def clear(self):
@@ -87,6 +92,8 @@ class ToneMatrix:
         for row in range(self.grid_size):
             for col in range(self.grid_size):
                 self.set_cell(row, col, False)
+
+            self.lit_cells[row] = []
 
     ### playback
 
@@ -119,9 +126,11 @@ class ToneMatrix:
 
     def pluck_column(self, col):
         """Pluck the string of every lit row in this column."""
-        for row in range(self.grid_size):
-            if self.is_on(row, col):
-                self.instruments[row].pluck()
+        # for row in range(self.grid_size):
+        #     if self.is_on(row, col):
+        #         self.instruments[row].pluck()
+        for row in self.lit_cells[col]:
+            self.instruments[row].pluck()
 
     ### resizing
 
@@ -145,6 +154,11 @@ class ToneMatrix:
                 new_grid.extend(self.grid[ self.index_of(row, 0) : self.index_of(row, new_size - 1) + 1 ])
             self.grid = new_grid
             self.instruments = self.instruments[:new_size]
+            self.lit_cells = self.lit_cells[:new_size]
+            for col in self.lit_cells:
+                for row in col[::-1]:
+                    if row >= new_size:
+                        col.remove(row)
 
 
         elif new_size > self.grid_size:
@@ -158,6 +172,7 @@ class ToneMatrix:
             new_grid.extend([False] * size_diff * new_size)
             self.grid = new_grid
             self.instruments.extend([ StringInstrument(frequency_for_row(self.grid_size + offset, new_size)) for offset in range(size_diff) ])
+            self.lit_cells.extend([[] for _ in range(size_diff)])
 
         self.column = 0
         self.grid_size = new_size
