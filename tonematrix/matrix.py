@@ -38,7 +38,7 @@ class ToneMatrix:
 
         self.grid_size = grid_size
         self.grid = [False] * grid_size**2
-        self.instruments = [StringInstrument(frequency_for_row(i, grid_size)) for i in range(grid_size)]
+        self.instruments = [StringInstrument(frequency_for_row(row, grid_size)) for row in range(grid_size)]
         self.column = 0
         self.last_press = True
         self.times_sample_called = 0
@@ -84,9 +84,9 @@ class ToneMatrix:
 
     def clear(self):
         """Switch every cell off, without replacing the list."""
-        for i in range(self.grid_size):
-            for j in range(self.grid_size):
-                self.set_cell(i, j, False)
+        for row in range(self.grid_size):
+            for col in range(self.grid_size):
+                self.set_cell(row, col, False)
 
     ### playback
 
@@ -119,9 +119,9 @@ class ToneMatrix:
 
     def pluck_column(self, col):
         """Pluck the string of every lit row in this column."""
-        for i in range(self.grid_size):
-            if self.is_on(i, col):
-                self.instruments[i].pluck()
+        for row in range(self.grid_size):
+            if self.is_on(row, col):
+                self.instruments[row].pluck()
 
     ### resizing
 
@@ -141,6 +141,7 @@ class ToneMatrix:
         new_grid = []
         if new_size < self.grid_size:
             for row in range(new_size):
+                # self.index_of breaks if I do (row, new_size) so we gotta use this weird expression
                 new_grid.extend(self.grid[ self.index_of(row, 0) : self.index_of(row, new_size - 1) + 1 ])
             self.grid = new_grid
             self.instruments = self.instruments[:new_size]
@@ -148,12 +149,15 @@ class ToneMatrix:
 
         elif new_size > self.grid_size:
             size_diff = new_size - self.grid_size
+            # Add pre-existing rows while extending them to new_size
             for row in range(self.grid_size):
                 new_grid.extend(self.grid[ self.index_of(row, 0) : self.index_of(row, self.grid_size - 1) + 1 ])
                 new_grid.extend([False] * size_diff)
+
+            # Add the new rows
             new_grid.extend([False] * size_diff * new_size)
             self.grid = new_grid
-            self.instruments.extend([StringInstrument(frequency_for_row(self.grid_size + i, new_size)) for i in range(size_diff)])
+            self.instruments.extend([ StringInstrument(frequency_for_row(self.grid_size + offset, new_size)) for offset in range(size_diff) ])
 
         self.column = 0
         self.grid_size = new_size
@@ -170,6 +174,7 @@ class ToneMatrix:
                     render += ON
                 else:
                     render += OFF
+            # Add newline after each row except the last one
             if row != self.grid_size - 1:
                 render += "\n"
         return render
