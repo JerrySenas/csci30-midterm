@@ -19,15 +19,6 @@ class RingBuffer:
 
     def __init__(self, capacity):
 
-        if capacity < 1:
-            raise ValueError(f"Capacity cannot be less than 1. Received {capacity}")
-
-        self._data = array("d", [0] * capacity)
-        self._front = 0
-        self._rear = 0
-        self._size = 0
-        self._capacity = capacity
-
         """Create an empty buffer that can hold `capacity` items.
 
         Set up four things:
@@ -38,6 +29,14 @@ class RingBuffer:
 
         Raise ValueError if capacity is less than 1.
         """
+        if capacity < 1:
+         raise ValueError(f"Capacity cannot be less than 1. Received {capacity}")
+
+        self._data = array("d", [0] * capacity)
+        self._front = 0
+        self._rear = 0
+        self._size = 0
+        self._capacity = capacity
 
     def capacity(self):
         """The most items this buffer can hold."""
@@ -52,12 +51,12 @@ class RingBuffer:
     def is_empty(self):
 
         if self._size == 0:
-            return True
+            return self._size == 0
 
     def is_full(self):
 
         if self._size == self._capacity:
-            return True
+            return self._size == self._capacity
 
     def enqueue(self, x):
         """Add x at the rear. 
