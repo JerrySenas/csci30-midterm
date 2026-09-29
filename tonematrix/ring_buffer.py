@@ -49,14 +49,10 @@ class RingBuffer:
         return self._size
 
     def is_empty(self):
-
-        if self._size == 0:
-            return self._size == 0
+     return self._size == 0
 
     def is_full(self):
-
-        if self._size == self._capacity:
-            return self._size == self._capacity
+     return self._size == self._capacity
 
     def enqueue(self, x):
         """Add x at the rear. 
