@@ -27,7 +27,7 @@ class StringInstrument:
     def __init__(self, frequency, sample_rate=SAMPLE_RATE):
 
         if frequency <= 0:
-            raise ValueError("Frequency should be positive")
+            raise ValueError("Frequency should be positive.")
 
         N = int(sample_rate // frequency)
 

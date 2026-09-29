@@ -30,7 +30,7 @@ class RingBuffer:
         Raise ValueError if capacity is less than 1.
         """
         if capacity < 1:
-         raise ValueError(f"Capacity cannot be less than 1. Received {capacity}")
+            raise ValueError(f"Capacity cannot be less than 1. Received {capacity}.")
 
         self._data = array("d", [0] * capacity)
         self._front = 0

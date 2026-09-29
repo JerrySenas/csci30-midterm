@@ -34,7 +34,7 @@ class ToneMatrix:
         Raise ValueError if grid_size < 1.
         """
         if grid_size < 1:
-            raise ValueError
+            raise ValueError("Grid size must be at least 1.")
 
         self.grid_size = grid_size
         self.grid = [False] * grid_size**2
@@ -52,7 +52,7 @@ class ToneMatrix:
         Raise IndexError if the position is off the grid.
         """
         if row < 0 or col < 0 or row >= self.grid_size or col >= self.grid_size:
-            raise IndexError
+            raise IndexError("Index out of bounds.")
         return self.grid_size * row + col
 
     def is_on(self, row, col):
@@ -136,27 +136,21 @@ class ToneMatrix:
         Raise ValueError if new_size < 1.
         """
         if new_size < 1:
-            raise ValueError
+            raise ValueError("New grid size must be at least 1.")
 
-        new_grid = []
-        if new_size < self.grid_size:
-            for row in range(new_size):
-                # self.index_of breaks if I do (row, new_size) so we gotta use this weird expression
-                new_grid.extend(self.grid[ self.index_of(row, 0) : self.index_of(row, new_size - 1) + 1 ])
+        if new_size != self.grid_size:
+            new_grid = [False] * new_size**2
+            scan_size = min(new_size, self.grid_size)
+            for row in range(scan_size):
+                for col in range(scan_size):
+                    new_grid[row*new_size + col] = self.grid[row*scan_size + col]
+
             self.grid = new_grid
+
+        if new_size < self.grid_size:
             self.instruments = self.instruments[:new_size]
-
-
         elif new_size > self.grid_size:
             size_diff = new_size - self.grid_size
-            # Add pre-existing rows while extending them to new_size
-            for row in range(self.grid_size):
-                new_grid.extend(self.grid[ self.index_of(row, 0) : self.index_of(row, self.grid_size - 1) + 1 ])
-                new_grid.extend([False] * size_diff)
-
-            # Add the new rows
-            new_grid.extend([False] * size_diff * new_size)
-            self.grid = new_grid
             self.instruments.extend([ StringInstrument(frequency_for_row(self.grid_size + offset, new_size)) for offset in range(size_diff) ])
 
         self.column = 0
