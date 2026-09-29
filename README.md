@@ -7,16 +7,16 @@ This problem is remedied by calling `next_sample()` only on the strings that are
 
 The threshold was derived empirically by comparing the audio output at different threshold values. For example, a threshold of 0.01 caused the audio to cut off abruptly.
 
-If a retired string is plucked again, its energy increases, keeping it in `ringing_strings`.
+If a retired string is plucked again, it is added back in to `ringing_strings`.
 
 ---
 
-Let:
+Running times will be calculated based on the RAM model of computation. Let:
 
 * `n` = grid size
 * `k` = lit cells
 * `a` = ringing strings, where `0 <= a <= n`
-* `s` = size of the string buffer
+* `s` = size of the string buffer of the lowest frequency string
 
 The original `next_sample()` contains:
 
@@ -51,7 +51,7 @@ ToneMatrix has one instrument for each row, meaning there are exactly `n` instru
 
 Each call to `instrument.next_sample()` performs RingBuffer operations `dequeue()`, `peek()`, and `enqueue()`, which are all O(1).
 
-Therefore, mixing takes **O(n)** time per audio sample.
+Therefore, mixing runs in **O(n)** time per audio sample.
 
 ---
 
@@ -91,10 +91,7 @@ The optimized loop is:
 
 The loop runs through `a` ringing strings, therefore mixing takes **O(a)** per audio sample.
 
-Since `a` &le; `n`, O(a) can be significantly smaller than O(n) when only a small number of strings are ringing.
-
-The threshold check examines the `a` currently ringing strings only, rather than all `n` strings, hence the check is performed only when the playhead moves to a new column, instead of on every sample.
-However, a check is done on all ringing strings every time the playhead moves by calling `energy()`.
+Since `a` &le; `n`, O(a) can be significantly smaller than O(n) when only a small number of strings are ringing. However, a check is done on all ringing strings every time the playhead moves by calling `energy()`.
 ```python
     def energy(self):
         total = 0.0
@@ -105,16 +102,15 @@ However, a check is done on all ringing strings every time the playhead moves by
             self.buffer.enqueue(value)
         return total / n
 ```
-`energy()` goes through all values in a string buffer, giving it an **O(s)** runtime. Since `energy()` is called on every ringing string, `ToneMatrix.next_sample()` gains an additional **O(as)** run time each time the playhead moves, which by default is about once every 0.185 seconds (1/5.4).
+`energy()` goes through all values in a string buffer, giving it an **O(s)** runtime. The size of the string buffer is inversely proportional to string frequency. Since `energy()` is called on every ringing string, `ToneMatrix.next_sample()` gains an additional **O(as)** run time each time the playhead moves, which by default is about once every 0.185 seconds (1/5.4 seconds).
+
 ---
 
 **Why do these bounds hold?**
 
 The original implementation mixes the sound by looping through every instrument. Since there are `n` strings, the loop executes `n` times for every audio sample, giving **O(n)** time per sample.
 
-The optimized implementation only loops through `ringing_strings`. Since there are `a` currently ringing strings, the mixing loop executes `a` times, giving **O(a)** time per sample. Since `a` &le; `n`, this can be significantly smaller when only a few strings are ringing.
-
-The energy threshold is performed only when the playhead moves to a new column. This means it is not repeated for every audio sample. It checks only the currently ringing `a` strings rather than all `n` strings, avoiding performing unneccesarry calculations on retired strings.
+The optimized implementation only loops through `ringing_strings`. Since there are `a` currently ringing strings, the mixing loop executes `a` times, giving **O(a)** time per sample. However, the energies of each active string is checked (which is O(as)) roughly every 5.4 seconds. Thus, the running time of the entire operation is **O(a + as/5.4)**.
 
 ---
 
@@ -155,7 +151,7 @@ The energy threshold is performed only when the playhead moves to a new column. 
 - The optimized implementation has lower μs/sample at every tested grid size and density. 
 - The improvement is more noticeable at lower densities, when fewer strings are likely to be ringing. 
 - At size 64 and density 0.05, the original takes 27.719 μs/sample, while the optimized version takes 11.410 μs/sample. 
-- At size 64 and density 0.25, the optimized version in still faster, but the different is smaller: 23.969 μs/sample for the optimized version and 27.931 μs/sample for the original version.
+- At size 64 and density 0.25, the optimized version in still faster, but the difference is smaller: 23.969 μs/sample for the optimized version and 27.931 μs/sample for the original version.
 - The results are consistent with the expected behavior of the optimized version; it should perform much better than the original when the active strings are less then the total amount of strings.
 
 ---
