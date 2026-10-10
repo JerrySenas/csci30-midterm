@@ -18,6 +18,8 @@ import shutil
 import sys
 import tempfile
 import threading
+import csv
+import time
 
 from tonematrix.audio import SAMPLE_RATE, SAMPLES_PER_COLUMN, write_wav
 from tonematrix.gui_common import (BG, BORDER, CELL_ON, GRID_LINE, MUTED,
@@ -26,7 +28,7 @@ from tonematrix.matrix import ToneMatrix
 from tonematrix.playback import AudioStream, LoopPlayer, render_loop, render_pass
 
 try:
-    from PySide6.QtCore import QRect, Qt, QTimer, Signal
+    from PySide6.QtCore import QRect, Qt, QTimer, Signal, QElapsedTimer
     from PySide6.QtGui import QColor, QPainter, QRegion
     from PySide6.QtWidgets import (QApplication, QComboBox, QHBoxLayout,
                                    QLabel, QPushButton, QVBoxLayout, QWidget)
@@ -36,8 +38,8 @@ except ImportError:                                         # pragma: no cover
              "front-end with:  python -m tonematrix.gui_tk")
 
 CELL = 30
-PAD = 8
-SIZES = ["4", "8", "12", "16", "24", "32"]
+PAD = 10
+SIZES = ["4", "8", "12", "16", "24", "32", "64"]
 
 # Every color is stated explicitly. Setting only background-color leaves the
 # text color to the system palette, which under a dark desktop theme means
@@ -128,7 +130,7 @@ class ToneMatrixWindow(QWidget):
     exportFinished = Signal()
     audioFailed = Signal()
 
-    def __init__(self, size=16):
+    def __init__(self, size=32):
         super().__init__()
         self.matrix = ToneMatrix(size)
         self.lock = threading.Lock()
@@ -160,6 +162,21 @@ class ToneMatrixWindow(QWidget):
         self.export_button = QPushButton("Export WAV")
         self.export_button.clicked.connect(self.on_export)
 
+        # self.animate_button = QPushButton("Play Animation")
+        # self.animate_button.clicked.connect(self.start_animation)
+
+        # self.animation_timer = QTimer(self)
+        # self.animation_timer.setTimerType(Qt.PreciseTimer)
+        # self.animation_timer.setInterval(TICK_MS)
+        # self.animation_timer.timeout.connect(self.play_animation_frame)
+        # self.animation_index = 0
+        # self.animation_frames = []
+
+        # self.elapsed_timer = QElapsedTimer()
+
+        # self.stop_animation_button = QPushButton("Stop Animation")
+        # self.stop_animation_button.clicked.connect(self.animation_timer.stop)
+
         self.size_box = QComboBox()
         self.size_box.addItems(SIZES)
         self.size_box.setCurrentText(str(size))
@@ -184,6 +201,7 @@ class ToneMatrixWindow(QWidget):
         self.timer.setInterval(TICK_MS)
         self.timer.timeout.connect(self.tick)
 
+
         self.renderFinished.connect(self.render_done)
         self.exportFinished.connect(self.export_done)
         self.audioFailed.connect(self.on_audio_failed)
@@ -193,6 +211,24 @@ class ToneMatrixWindow(QWidget):
             self.say("No audio output found -- use Export WAV.")
         else:
             self.say("Click and drag to draw. Press Play.")
+
+        # with open("frames.csv", newline="", encoding="utf-8") as f:
+        #     reader = csv.reader(f)
+        #     framerow = next(reader, None)
+        #     for frame in framerow:
+        #         rows = [
+        #             line.strip()
+        #             for line in frame.strip().splitlines()
+        #             if line.strip()
+        #         ]
+
+        #         self.animation_frames.append([
+        #             char == "#"
+        #             for row in rows
+        #             for char in row
+        #         ])
+        # self.total_frames = len(self.animation_frames)
+        # self.fps = 30
 
     def say(self, text):
         self.status.setText(text)
@@ -338,7 +374,7 @@ class ToneMatrixWindow(QWidget):
         self.say("rendering...")
 
         def work():
-            samples = render_pass(self.matrix, self.lock, SAMPLE_RATE * 8)
+            samples = render_pass(self.matrix, self.lock, 306784) #use 153408 if eigth notes are the lowest note value used
             write_wav("tonematrix.wav", samples, SAMPLE_RATE)
             self.exportFinished.emit()
 
@@ -348,6 +384,35 @@ class ToneMatrixWindow(QWidget):
         self.busy = False
         self.export_button.setEnabled(True)
         self.say("wrote tonematrix.wav (8 seconds)")
+
+    # def start_animation(self):
+    #     self.animation_index = 0
+    #     self.starttime = time.perf_counter()
+    #     self.elapsed_timer.start()
+    #     self.animation_timer.start()
+
+    # def play_animation_frame(self):
+    #     if not self.animation_frames:
+    #         return
+
+    #     elapsed_ms = self.elapsed_timer.elapsed()
+    #     frame_index = int(elapsed_ms * self.fps / 1000)
+    #     frame_index %= self.total_frames
+    #     if frame_index == self.animation_index and elapsed_ms != 0:
+    #         return
+
+    #     self.animation_index = frame_index
+    #     frame = self.animation_frames[frame_index]
+
+    #     with self.lock:
+    #         self.matrix.grid[:] = frame
+
+    #     self.grid.update()
+
+    #     # self.animation_index += 1
+    #     # if self.animation_index == len(self.animation_frames) - 1:
+    #     #     print(time.perf_counter() - self.starttime)
+    #     #     self.animation_timer.stop()
 
     def closeEvent(self, event):
         self.timer.stop()

@@ -14,7 +14,7 @@ SAMPLE_RATE = 44100
 
 # How many samples elapse between column plucks. 8192 = 2**13, which at
 # 44.1kHz works out to about 5.4 columns per second.
-SAMPLES_PER_COLUMN = 8192
+SAMPLES_PER_COLUMN = 9587 # use 4794 if your lowest note value is eight notes
 
 
 def clip(sample):
